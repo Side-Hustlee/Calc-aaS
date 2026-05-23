@@ -78,8 +78,8 @@ const TOASTS = [
   "Jeff in Ohio just upgraded to PRO ⭐",
   "🔥 87 people are viewing this pricing right now",
   "Sarah saved 0.4 seconds with CalcPro AI",
-  "⚠️ Your free trial of breathing expires soon",
-  "A competitor just calculated 7×8 without you",
+  // "⚠️ Your free trial of breathing expires soon",
+  // "A competitor just calculated 7×8 without you",
 ];
 
 type Session = {
@@ -97,7 +97,9 @@ const loadSession = (): Session => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch {
+    // ignore
+  }
   return { plan: null, calcsRemaining: 0, totalCharged: 0, history: [] };
 };
 
@@ -250,7 +252,7 @@ function Index() {
         <div className="fixed inset-x-0 top-0 z-50 border-b border-border bg-foreground text-background px-4 py-3 text-sm shadow-lg">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
             <Cookie className="h-4 w-4 shrink-0" />
-            <span className="flex-1 min-w-[200px]">
+            <span className="flex-1 min-w-50">
               We use <b>847 cookies</b>, <b>12 trackers</b>, and your{" "}
               <b>browsing history since 2009</b> to deliver "essential" calculator functionality. By
               scrolling, blinking, or existing, you agree.
