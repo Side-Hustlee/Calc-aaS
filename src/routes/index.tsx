@@ -17,17 +17,16 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MaaS — Math as a Service" },
+      { title: "CalcaaS — Calculator as a Service" },
       {
         name: "description",
         content:
-          "The world's first cloud-native, AI-powered, blockchain-verified Math-as-a-Service platform. Pay per equals sign.",
+          "The world's first cloud-native, AI-powered, Calculator-as-a-Service platform. Pay per equals sign.",
       },
     ],
   }),
   component: Index,
 });
-
 
 type PlanKey = "BASIC" | "PRO" | "TEAMS" | "ENTERPRISE";
 
@@ -40,10 +39,39 @@ const PLANS: {
   perk: string;
   featured?: boolean;
 }[] = [
-  { name: "BASIC", price: "$4.99", priceNum: 4.99, advertised: 100, granted: 3, perk: "100 calcs/mo*" },
-  { name: "PRO", price: "$19.99", priceNum: 19.99, advertised: 9999, granted: 7, perk: "Unlimited*", featured: true },
-  { name: "TEAMS", price: "$49.99", priceNum: 49.99, advertised: 500, granted: 12, perk: "500 calcs · 5 seats*" },
-  { name: "ENTERPRISE", price: "$2,499", priceNum: 2499, advertised: 1000000, granted: 25, perk: "1M calcs (LOL)*" },
+  {
+    name: "BASIC",
+    price: "$4.99",
+    priceNum: 4.99,
+    advertised: 100,
+    granted: 3,
+    perk: "100 calcs/mo*",
+  },
+  {
+    name: "PRO",
+    price: "$19.99",
+    priceNum: 19.99,
+    advertised: 9999,
+    granted: 7,
+    perk: "Unlimited*",
+    featured: true,
+  },
+  {
+    name: "TEAMS",
+    price: "$49.99",
+    priceNum: 49.99,
+    advertised: 500,
+    granted: 12,
+    perk: "500 calcs · 5 seats*",
+  },
+  {
+    name: "ENTERPRISE",
+    price: "$2,499",
+    priceNum: 2499,
+    advertised: 1000000,
+    granted: 25,
+    perk: "1M calcs (LOL)*",
+  },
 ];
 
 const TOASTS = [
@@ -64,7 +92,8 @@ type Session = {
 const STORAGE_KEY = "calcpro_session_v1";
 
 const loadSession = (): Session => {
-  if (typeof window === "undefined") return { plan: null, calcsRemaining: 0, totalCharged: 0, history: [] };
+  if (typeof window === "undefined")
+    return { plan: null, calcsRemaining: 0, totalCharged: 0, history: [] };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -75,7 +104,11 @@ const loadSession = (): Session => {
 // Safe-ish eval for our calculator tokens
 const evaluate = (expr: string): string => {
   try {
-    const js = expr.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-").replace(/[^0-9+\-*/.() ]/g, "");
+    const js = expr
+      .replace(/×/g, "*")
+      .replace(/÷/g, "/")
+      .replace(/−/g, "-")
+      .replace(/[^0-9+\-*/.() ]/g, "");
     if (!js.trim()) return "0";
     // eslint-disable-next-line no-new-func
     const v = Function(`"use strict"; return (${js})`)();
@@ -98,9 +131,13 @@ function Index() {
   const [selectedPlan, setSelectedPlan] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
   const [eulaScroll, setEulaScroll] = useState(0);
-  const [session, setSession] = useState<Session>({ plan: null, calcsRemaining: 0, totalCharged: 0, history: [] });
+  const [session, setSession] = useState<Session>({
+    plan: null,
+    calcsRemaining: 0,
+    totalCharged: 0,
+    history: [],
+  });
   const [card, setCard] = useState({ number: "", exp: "", cvc: "", name: "" });
-
 
   useEffect(() => {
     setSession(loadSession());
@@ -156,7 +193,6 @@ function Index() {
     setTimeout(() => setToast(null), 4000);
   };
 
-
   const keys = useMemo(
     () => [
       ["C", "(", ")", "÷"],
@@ -201,7 +237,6 @@ function Index() {
     }, 1800);
   };
 
-
   const clearSession = () => {
     localStorage.removeItem(STORAGE_KEY);
     setSession({ plan: null, calcsRemaining: 0, totalCharged: 0, history: [] });
@@ -210,14 +245,15 @@ function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background pb-24">
+    <div className="min-h-screen bg-linear-to-br from-background via-secondary to-background pb-24">
       {showCookies && (
         <div className="fixed inset-x-0 top-0 z-50 border-b border-border bg-foreground text-background px-4 py-3 text-sm shadow-lg">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
             <Cookie className="h-4 w-4 shrink-0" />
             <span className="flex-1 min-w-[200px]">
-              We use <b>847 cookies</b>, <b>12 trackers</b>, and your <b>browsing history since 2009</b> to deliver
-              "essential" calculator functionality. By scrolling, blinking, or existing, you agree.
+              We use <b>847 cookies</b>, <b>12 trackers</b>, and your{" "}
+              <b>browsing history since 2009</b> to deliver "essential" calculator functionality. By
+              scrolling, blinking, or existing, you agree.
             </span>
             <button className="rounded-md bg-background/10 px-3 py-1.5 text-xs hover:bg-background/20">
               Manage 847 partners
@@ -235,18 +271,18 @@ function Index() {
       <div className={`mx-auto max-w-md px-4 ${showCookies ? "pt-24" : "pt-10"}`}>
         <header className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand to-danger text-brand-foreground font-black">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-linear-to-br from-brand to-danger text-brand-foreground font-black">
               ∑
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight">MaaS</h1>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                Math · as · a · Service
+                Calculator as a Service
               </p>
             </div>
           </div>
           {session.plan ? (
-            <div className="flex items-center gap-1.5 rounded-full border border-brand bg-gradient-to-r from-brand to-danger px-3 py-1.5 shadow-lg shadow-brand/40">
+            <div className="flex items-center gap-1.5 rounded-full border border-brand bg-linear-to-r from-brand to-danger px-3 py-1.5 shadow-lg shadow-brand/40">
               <Crown className="h-3 w-3 text-brand-foreground" />
               <span className="text-[10px] font-black uppercase tracking-wider text-brand-foreground">
                 {session.plan}
@@ -266,7 +302,7 @@ function Index() {
           <div className="mb-4 overflow-hidden rounded-xl border border-brand/30 bg-brand/5">
             <div className="h-1.5 bg-secondary">
               <div
-                className="h-full bg-gradient-to-r from-brand to-danger transition-all"
+                className="h-full bg-linear-to-r from-brand to-danger transition-all"
                 style={{
                   width: `${Math.max(
                     0,
@@ -293,7 +329,6 @@ function Index() {
             </div>
           </div>
         )}
-
 
         {/* Calculator */}
         <div className="rounded-3xl border border-border bg-card p-4 shadow-2xl">
@@ -343,8 +378,9 @@ function Index() {
                 <h2 className="font-bold">{session.plan} Member</h2>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                You have <b className="text-foreground">{session.calcsRemaining}</b> calculations left. Total charged
-                so far: <b className="text-danger">${session.totalCharged.toFixed(2)}</b>.
+                You have <b className="text-foreground">{session.calcsRemaining}</b> calculations
+                left. Total charged so far:{" "}
+                <b className="text-danger">${session.totalCharged.toFixed(2)}</b>.
               </p>
               <div className="mt-3 flex gap-2">
                 <button
@@ -368,7 +404,8 @@ function Index() {
                 <h2 className="font-bold">Unlock your calculator</h2>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Free plan includes <b className="text-danger">0</b> calculations. Math is a premium feature.
+                Free plan includes <b className="text-danger">0</b> calculations. Math is a premium
+                feature.
               </p>
               <button
                 onClick={() => setShowPaywall(true)}
@@ -387,7 +424,7 @@ function Index() {
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Session History ({session.history.length})
               </h3>
-              <span className="text-[10px] text-muted-foreground">stored locally · forever</span>
+              {/* <span className="text-[10px] text-muted-foreground">stored locally · forever</span> */}
             </div>
             <ul className="divide-y divide-border text-sm">
               {session.history.slice(0, 6).map((h, i) => (
@@ -403,12 +440,26 @@ function Index() {
         {/* Features */}
         <div className="mt-6 space-y-2">
           {[
-            { icon: Sparkles, t: "AI-Powered Addition™", d: "Our GPT-7 model decides if 2+2 is really 4 today." },
-            { icon: ShieldCheck, t: "SOC-99 Compliant", d: "Your numbers are encrypted, then sold." },
-            { icon: TrendingUp, t: "Cloud-Native Subtraction", d: "Now with 47ms latency (we round down)." },
-            { icon: Zap, t: "Blockchain Verified", d: "Every '=' mints an NFT. You don't own it." },
+            {
+              icon: Sparkles,
+              t: "AI-Powered Addition™",
+              d: "Our GPT-7 model decides if 2+2 is really 4 today.",
+            },
+            {
+              icon: ShieldCheck,
+              t: "SOC-99 Compliant",
+              d: "Your numbers are encrypted, then sold.",
+            },
+            {
+              icon: TrendingUp,
+              t: "Cloud-Native Subtraction",
+              d: "Now with 47ms latency (we round down).",
+            },
           ].map((f, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">
+            <div
+              key={i}
+              className="flex items-start gap-3 rounded-xl border border-border bg-card p-3"
+            >
               <f.icon className="mt-0.5 h-4 w-4 text-brand" />
               <div>
                 <div className="text-sm font-semibold">{f.t}</div>
@@ -423,9 +474,11 @@ function Index() {
             Loved by 0 calculators
           </h3>
           {[
-            { n: "Marcus T., CFO", q: "After switching to CalcPro™, I now pay $19.99/mo to add two numbers. 10/10." },
+            {
+              n: "Marcus T., CFO",
+              q: "After switching to CalcPro™, I now pay $19.99/mo to add two numbers. 10/10.",
+            },
             { n: "Linda K., Influencer", q: "I no longer think for myself. Liberating." },
-            { n: "Anonymous, Definitely Real", q: "This is the Uber of calculators. Whatever that means." },
           ].map((t, i) => (
             <div key={i} className="border-t border-border py-3 first:border-t-0 first:pt-0">
               <div className="flex gap-0.5 mb-1">
@@ -439,13 +492,13 @@ function Index() {
           ))}
         </div>
 
-        <footer className="mt-8 space-y-2 text-center text-[10px] text-muted-foreground">
-          <p>
-            © 2026 CalcPro Holdings, LLC, a subsidiary of CalcPro International, a portfolio company of CalcPro
-            Capital. By reading this footer you owe us $3.
-          </p>
+        <footer className="mt-8 space-y-2 text-center text-xs lg:text-sm text-muted-foreground">
           <p className="text-foreground/70">
-            🪤 A sketchy idea by <b className="text-brand">Ntwali</b> :) — built to make non-tech users flinch.
+            🪤 A sketchy idea by <b className="text-brand">Ntwali</b> :)
+          </p>
+          <p>
+            © 2026 Calculator as Service | All Right Reserved, <br /> By reading this footer you owe
+            us $3 more 💀.
           </p>
         </footer>
       </div>
@@ -460,16 +513,18 @@ function Index() {
       {showGotcha && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/70 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md overflow-hidden rounded-3xl border-2 border-brand bg-card p-6 shadow-2xl animate-in zoom-in-95">
-            <div className="absolute -right-8 -top-8 h-32 w-32 rotate-12 rounded-full bg-gradient-to-br from-brand to-danger opacity-20 blur-2xl" />
+            <div className="absolute -right-8 -top-8 h-32 w-32 rotate-12 rounded-full bg-linear-to-br from-brand to-danger opacity-20 blur-2xl" />
             <div className="relative text-center">
               <div className="text-6xl">🫵</div>
               <h3 className="mt-2 text-4xl font-black tracking-tight">GOTCHA YAA!</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                You thought math was <i>free</i>? Adorable. Your equation is being held hostage by our patented
-                AI-Quantum-Blockchain stack™.
+                You thought math was <i>free</i>? Adorable. Your equation is being held hostage by
+                our patented AI-Quantum stack™ 💀.
               </p>
               <div className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-left">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Your equation</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Your equation
+                </div>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="truncate font-mono text-lg font-bold">{pendingExpr} =</span>
                   <span className="flex items-center gap-1 rounded-md bg-lock/10 px-2 py-1 text-xs font-bold text-lock">
@@ -482,7 +537,7 @@ function Index() {
                   setShowGotcha(false);
                   setShowPaywall(true);
                 }}
-                className="mt-5 w-full rounded-xl bg-gradient-to-r from-brand to-danger py-3 text-sm font-black uppercase tracking-wider text-brand-foreground shadow-lg shadow-brand/40 hover:opacity-90"
+                className="mt-5 w-full rounded-xl bg-linear-to-r from-brand to-danger py-3 text-sm font-black uppercase tracking-wider text-brand-foreground shadow-lg shadow-brand/40 hover:opacity-90"
               >
                 Unlock Result — From $4.99
               </button>
@@ -497,7 +552,6 @@ function Index() {
         </div>
       )}
 
-
       {showPaywall && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl">
@@ -508,7 +562,7 @@ function Index() {
               <X className="h-3 w-3" />
             </button>
             <div className="text-center">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-brand to-danger">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-linear-to-br from-brand to-danger">
                 <Crown className="h-7 w-7 text-brand-foreground" />
               </div>
               <h3 className="mt-4 text-2xl font-black">Pick your poison.</h3>
@@ -574,17 +628,35 @@ function Index() {
               className="mt-3 h-56 overflow-y-auto rounded-xl border border-border bg-background p-4 text-xs leading-relaxed text-muted-foreground"
             >
               <p className="font-bold text-foreground">1. Soul Clause.</p>
-              <p>By clicking "I Agree", you grant CalcPro™ a perpetual, irrevocable, transferable license to your soul, your firstborn, and your Netflix password.</p>
-              <p className="mt-3 font-bold text-foreground">2. The "Advertised vs Actual" Clause.</p>
-              <p>Calc quotas listed on pricing tiles are <i>aspirational</i>. Actual delivered quota will be drastically lower. By agreeing you accept that "100" means "3", "unlimited" means "7", and "1,000,000" means "25". This is a feature.</p>
+              <p>
+                By clicking "I Agree", you grant CalcPro™ a perpetual, irrevocable, transferable
+                license to your soul, your firstborn, and your Netflix password.
+              </p>
+              <p className="mt-3 font-bold text-foreground">
+                2. The "Advertised vs Actual" Clause.
+              </p>
+              <p>
+                Calc quotas listed on pricing tiles are <i>aspirational</i>. Actual delivered quota
+                will be drastically lower. By agreeing you accept that "100" means "3", "unlimited"
+                means "7", and "1,000,000" means "25". This is a feature.
+              </p>
               <p className="mt-3 font-bold text-foreground">3. Refund Policy.</p>
               <p>Refunds will be processed within 90 business years, payable in CalcCoin™.</p>
               <p className="mt-3 font-bold text-foreground">4. Math Rights.</p>
-              <p>All numbers entered become the intellectual property of CalcPro Holdings. The number 7 is trademarked.</p>
+              <p>
+                All numbers entered become the intellectual property of CalcPro Holdings. The number
+                7 is trademarked.
+              </p>
               <p className="mt-3 font-bold text-foreground">5. Pricing Increases.</p>
-              <p>Your subscription will increase by 12% every Tuesday. There is no cancel button. There never was.</p>
+              <p>
+                Your subscription will increase by 12% every Tuesday. There is no cancel button.
+                There never was.
+              </p>
               <p className="mt-3 font-bold text-foreground">6. Acknowledgment.</p>
-              <p>You acknowledge that 2 + 2 may equal 5 if our AI deems it strategically beneficial to shareholders.</p>
+              <p>
+                You acknowledge that 2 + 2 may equal 5 if our AI deems it strategically beneficial
+                to shareholders.
+              </p>
               <p className="mt-3">...continued for 47,282 more pages...</p>
               <p className="mt-3 text-foreground">Bottom. You may now click "I Agree".</p>
             </div>
