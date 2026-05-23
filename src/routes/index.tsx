@@ -17,16 +17,17 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CalcPro™ — The AI-Powered Calculator-as-a-Service" },
+      { title: "MaaS — Math as a Service" },
       {
         name: "description",
         content:
-          "Revolutionary cloud-native arithmetic. Synergize your sums. Disrupt your division. Now with Blockchain.",
+          "The world's first cloud-native, AI-powered, blockchain-verified Math-as-a-Service platform. Pay per equals sign.",
       },
     ],
   }),
   component: Index,
 });
+
 
 type PlanKey = "BASIC" | "PRO" | "TEAMS" | "ENTERPRISE";
 
@@ -86,7 +87,9 @@ const evaluate = (expr: string): string => {
 };
 
 function Index() {
-  const [display, setDisplay] = useState("2 + 2");
+  const [display, setDisplay] = useState("0");
+  const [pendingExpr, setPendingExpr] = useState<string | null>(null);
+  const [showGotcha, setShowGotcha] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCookies, setShowCookies] = useState(true);
   const [showEula, setShowEula] = useState(false);
@@ -97,6 +100,7 @@ function Index() {
   const [eulaScroll, setEulaScroll] = useState(0);
   const [session, setSession] = useState<Session>({ plan: null, calcsRemaining: 0, totalCharged: 0, history: [] });
   const [card, setCard] = useState({ number: "", exp: "", cvc: "", name: "" });
+
 
   useEffect(() => {
     setSession(loadSession());
@@ -122,27 +126,36 @@ function Index() {
       return;
     }
     if (k === "=") {
+      if (display === "0" || display === "Error") return;
       if (!session.plan || session.calcsRemaining <= 0) {
-        setShowPaywall(true);
+        setPendingExpr(display);
+        setShowGotcha(true);
         return;
       }
-      const result = evaluate(display);
-      setSession((s) => ({
-        ...s,
-        calcsRemaining: s.calcsRemaining - 1,
-        history: [{ expr: display, result, at: Date.now() }, ...s.history].slice(0, 20),
-      }));
-      setDisplay(result);
-      setToast(
-        session.calcsRemaining - 1 <= 0
-          ? "💀 You're out of calcs. Time to renew (price went up 12%)."
-          : `✨ Math achieved. ${session.calcsRemaining - 1} calcs left.`,
-      );
-      setTimeout(() => setToast(null), 4000);
+      runEvaluation(display);
       return;
     }
     setDisplay((d) => (d === "0" || d === "Error" ? k : d + k));
   };
+
+  const runEvaluation = (expr: string) => {
+    const result = evaluate(expr);
+    setSession((s) => ({
+      ...s,
+      calcsRemaining: Math.max(0, s.calcsRemaining - 1),
+      history: [{ expr, result, at: Date.now() }, ...s.history].slice(0, 20),
+    }));
+    setDisplay(result);
+    setPendingExpr(null);
+    const left = Math.max(0, session.calcsRemaining - 1);
+    setToast(
+      left <= 0
+        ? "💀 You're out of calcs. Time to renew (price went up 12%)."
+        : `✨ Math achieved. ${left} calcs left.`,
+    );
+    setTimeout(() => setToast(null), 4000);
+  };
+
 
   const keys = useMemo(
     () => [
@@ -172,8 +185,22 @@ function Index() {
         `✅ Charged ${plan.price}. You got ${plan.granted} calcs (advertised ${plan.advertised.toLocaleString()}). Fine print, baby.`,
       );
       setTimeout(() => setToast(null), 6000);
+      // auto-evaluate the equation the user was trying to solve
+      if (pendingExpr) {
+        setTimeout(() => {
+          const result = evaluate(pendingExpr);
+          setSession((s) => ({
+            ...s,
+            calcsRemaining: Math.max(0, s.calcsRemaining - 1),
+            history: [{ expr: pendingExpr, result, at: Date.now() }, ...s.history].slice(0, 20),
+          }));
+          setDisplay(result);
+          setPendingExpr(null);
+        }, 400);
+      }
     }, 1800);
   };
+
 
   const clearSession = () => {
     localStorage.removeItem(STORAGE_KEY);
@@ -206,28 +233,67 @@ function Index() {
       )}
 
       <div className={`mx-auto max-w-md px-4 ${showCookies ? "pt-24" : "pt-10"}`}>
-        <header className="mb-6 flex items-center justify-between">
+        <header className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand to-danger text-brand-foreground font-black">
-              C
+              ∑
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight">CalcPro™</h1>
+              <h1 className="text-xl font-black tracking-tight">MaaS</h1>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                AI · Cloud · Blockchain · Quantum
+                Math · as · a · Service
               </p>
             </div>
           </div>
-          <span
-            className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
-              session.plan
-                ? "border-brand/40 bg-brand/10 text-brand"
-                : "border-danger/30 bg-danger/10 text-danger"
-            }`}
-          >
-            {session.plan ? `${session.plan} · ${session.calcsRemaining} left` : "Free Plan"}
-          </span>
+          {session.plan ? (
+            <div className="flex items-center gap-1.5 rounded-full border border-brand bg-gradient-to-r from-brand to-danger px-3 py-1.5 shadow-lg shadow-brand/40">
+              <Crown className="h-3 w-3 text-brand-foreground" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-brand-foreground">
+                {session.plan}
+              </span>
+              <span className="rounded-full bg-background/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-foreground">
+                {session.calcsRemaining} left
+              </span>
+            </div>
+          ) : (
+            <span className="animate-pulse rounded-full border border-danger/40 bg-danger/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-danger">
+              ⚠ No Plan
+            </span>
+          )}
         </header>
+
+        {session.plan && (
+          <div className="mb-4 overflow-hidden rounded-xl border border-brand/30 bg-brand/5">
+            <div className="h-1.5 bg-secondary">
+              <div
+                className="h-full bg-gradient-to-r from-brand to-danger transition-all"
+                style={{
+                  width: `${Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      (session.calcsRemaining /
+                        Math.max(1, PLANS.find((p) => p.name === session.plan)?.granted ?? 1)) *
+                        100,
+                    ),
+                  )}%`,
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between px-3 py-2 text-[10px] text-muted-foreground">
+              <span>
+                Quota:{" "}
+                <b className="text-foreground">
+                  {session.calcsRemaining}/{PLANS.find((p) => p.name === session.plan)?.granted}
+                </b>{" "}
+                (advertised{" "}
+                {PLANS.find((p) => p.name === session.plan)?.advertised.toLocaleString()})
+              </span>
+              <span className="text-danger">${session.totalCharged.toFixed(2)} spent</span>
+            </div>
+          </div>
+        )}
+
 
         {/* Calculator */}
         <div className="rounded-3xl border border-border bg-card p-4 shadow-2xl">
@@ -390,7 +456,48 @@ function Index() {
         </div>
       )}
 
-      {/* Paywall / plan picker */}
+      {/* GOTCHA modal — the rug pull */}
+      {showGotcha && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/70 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border-2 border-brand bg-card p-6 shadow-2xl animate-in zoom-in-95">
+            <div className="absolute -right-8 -top-8 h-32 w-32 rotate-12 rounded-full bg-gradient-to-br from-brand to-danger opacity-20 blur-2xl" />
+            <div className="relative text-center">
+              <div className="text-6xl">🫵</div>
+              <h3 className="mt-2 text-4xl font-black tracking-tight">GOTCHA YAA!</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You thought math was <i>free</i>? Adorable. Your equation is being held hostage by our patented
+                AI-Quantum-Blockchain stack™.
+              </p>
+              <div className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-left">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Your equation</div>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="truncate font-mono text-lg font-bold">{pendingExpr} =</span>
+                  <span className="flex items-center gap-1 rounded-md bg-lock/10 px-2 py-1 text-xs font-bold text-lock">
+                    <Lock className="h-3 w-3" /> ???
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowGotcha(false);
+                  setShowPaywall(true);
+                }}
+                className="mt-5 w-full rounded-xl bg-gradient-to-r from-brand to-danger py-3 text-sm font-black uppercase tracking-wider text-brand-foreground shadow-lg shadow-brand/40 hover:opacity-90"
+              >
+                Unlock Result — From $4.99
+              </button>
+              <button
+                onClick={() => setShowGotcha(false)}
+                className="mt-2 w-full text-[10px] text-muted-foreground hover:underline"
+              >
+                Walk away (and never know the answer)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {showPaywall && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl">
