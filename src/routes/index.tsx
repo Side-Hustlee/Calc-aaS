@@ -17,16 +17,17 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CalcPro™ — The AI-Powered Calculator-as-a-Service" },
+      { title: "MaaS — Math as a Service" },
       {
         name: "description",
         content:
-          "Revolutionary cloud-native arithmetic. Synergize your sums. Disrupt your division. Now with Blockchain.",
+          "The world's first cloud-native, AI-powered, blockchain-verified Math-as-a-Service platform. Pay per equals sign.",
       },
     ],
   }),
   component: Index,
 });
+
 
 type PlanKey = "BASIC" | "PRO" | "TEAMS" | "ENTERPRISE";
 
