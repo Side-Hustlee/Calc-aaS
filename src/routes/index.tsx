@@ -185,8 +185,22 @@ function Index() {
         `✅ Charged ${plan.price}. You got ${plan.granted} calcs (advertised ${plan.advertised.toLocaleString()}). Fine print, baby.`,
       );
       setTimeout(() => setToast(null), 6000);
+      // auto-evaluate the equation the user was trying to solve
+      if (pendingExpr) {
+        setTimeout(() => {
+          const result = evaluate(pendingExpr);
+          setSession((s) => ({
+            ...s,
+            calcsRemaining: Math.max(0, s.calcsRemaining - 1),
+            history: [{ expr: pendingExpr, result, at: Date.now() }, ...s.history].slice(0, 20),
+          }));
+          setDisplay(result);
+          setPendingExpr(null);
+        }, 400);
+      }
     }, 1800);
   };
+
 
   const clearSession = () => {
     localStorage.removeItem(STORAGE_KEY);
