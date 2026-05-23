@@ -126,27 +126,36 @@ function Index() {
       return;
     }
     if (k === "=") {
+      if (display === "0" || display === "Error") return;
       if (!session.plan || session.calcsRemaining <= 0) {
-        setShowPaywall(true);
+        setPendingExpr(display);
+        setShowGotcha(true);
         return;
       }
-      const result = evaluate(display);
-      setSession((s) => ({
-        ...s,
-        calcsRemaining: s.calcsRemaining - 1,
-        history: [{ expr: display, result, at: Date.now() }, ...s.history].slice(0, 20),
-      }));
-      setDisplay(result);
-      setToast(
-        session.calcsRemaining - 1 <= 0
-          ? "💀 You're out of calcs. Time to renew (price went up 12%)."
-          : `✨ Math achieved. ${session.calcsRemaining - 1} calcs left.`,
-      );
-      setTimeout(() => setToast(null), 4000);
+      runEvaluation(display);
       return;
     }
     setDisplay((d) => (d === "0" || d === "Error" ? k : d + k));
   };
+
+  const runEvaluation = (expr: string) => {
+    const result = evaluate(expr);
+    setSession((s) => ({
+      ...s,
+      calcsRemaining: Math.max(0, s.calcsRemaining - 1),
+      history: [{ expr, result, at: Date.now() }, ...s.history].slice(0, 20),
+    }));
+    setDisplay(result);
+    setPendingExpr(null);
+    const left = Math.max(0, session.calcsRemaining - 1);
+    setToast(
+      left <= 0
+        ? "💀 You're out of calcs. Time to renew (price went up 12%)."
+        : `✨ Math achieved. ${left} calcs left.`,
+    );
+    setTimeout(() => setToast(null), 4000);
+  };
+
 
   const keys = useMemo(
     () => [
