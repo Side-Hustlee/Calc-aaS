@@ -456,7 +456,48 @@ function Index() {
         </div>
       )}
 
-      {/* Paywall / plan picker */}
+      {/* GOTCHA modal — the rug pull */}
+      {showGotcha && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/70 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border-2 border-brand bg-card p-6 shadow-2xl animate-in zoom-in-95">
+            <div className="absolute -right-8 -top-8 h-32 w-32 rotate-12 rounded-full bg-gradient-to-br from-brand to-danger opacity-20 blur-2xl" />
+            <div className="relative text-center">
+              <div className="text-6xl">🫵</div>
+              <h3 className="mt-2 text-4xl font-black tracking-tight">GOTCHA YAA!</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You thought math was <i>free</i>? Adorable. Your equation is being held hostage by our patented
+                AI-Quantum-Blockchain stack™.
+              </p>
+              <div className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-left">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Your equation</div>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="truncate font-mono text-lg font-bold">{pendingExpr} =</span>
+                  <span className="flex items-center gap-1 rounded-md bg-lock/10 px-2 py-1 text-xs font-bold text-lock">
+                    <Lock className="h-3 w-3" /> ???
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowGotcha(false);
+                  setShowPaywall(true);
+                }}
+                className="mt-5 w-full rounded-xl bg-gradient-to-r from-brand to-danger py-3 text-sm font-black uppercase tracking-wider text-brand-foreground shadow-lg shadow-brand/40 hover:opacity-90"
+              >
+                Unlock Result — From $4.99
+              </button>
+              <button
+                onClick={() => setShowGotcha(false)}
+                className="mt-2 w-full text-[10px] text-muted-foreground hover:underline"
+              >
+                Walk away (and never know the answer)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {showPaywall && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl">
