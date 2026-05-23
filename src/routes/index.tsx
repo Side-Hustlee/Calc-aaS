@@ -1,22 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Lock, Sparkles, Crown, X, ShieldCheck, Cookie, Zap, TrendingUp, Star } from "lucide-react";
+import {
+  Lock,
+  Sparkles,
+  Crown,
+  X,
+  ShieldCheck,
+  Cookie,
+  Zap,
+  TrendingUp,
+  Star,
+  CreditCard,
+  CheckCircle2,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "CalcPro™ — The AI-Powered Calculator-as-a-Service" },
-      { name: "description", content: "Revolutionary cloud-native arithmetic. Synergize your sums. Disrupt your division. Now with Blockchain." },
+      {
+        name: "description",
+        content:
+          "Revolutionary cloud-native arithmetic. Synergize your sums. Disrupt your division. Now with Blockchain.",
+      },
     ],
   }),
   component: Index,
 });
 
-const PLANS = [
-  { name: "BASIC", price: "$4.99", perk: "10 calcs/mo", color: "border-border" },
-  { name: "PRO", price: "$19.99", perk: "Unlimited*", color: "border-brand ring-2 ring-brand", featured: true },
-  { name: "TEAMS", price: "$49.99", perk: "5 seats", color: "border-border" },
-  { name: "ENTERPRISE", price: "$2,499", perk: "Call us 😉", color: "border-border" },
+type PlanKey = "BASIC" | "PRO" | "TEAMS" | "ENTERPRISE";
+
+const PLANS: {
+  name: PlanKey;
+  price: string;
+  priceNum: number;
+  advertised: number; // calcs you THINK you're buying
+  granted: number; // calcs you ACTUALLY get
+  perk: string;
+  featured?: boolean;
+}[] = [
+  { name: "BASIC", price: "$4.99", priceNum: 4.99, advertised: 100, granted: 3, perk: "100 calcs/mo*" },
+  { name: "PRO", price: "$19.99", priceNum: 19.99, advertised: 9999, granted: 7, perk: "Unlimited*", featured: true },
+  { name: "TEAMS", price: "$49.99", priceNum: 49.99, advertised: 500, granted: 12, perk: "500 calcs · 5 seats*" },
+  { name: "ENTERPRISE", price: "$2,499", priceNum: 2499, advertised: 1000000, granted: 25, perk: "1M calcs (LOL)*" },
 ];
 
 const TOASTS = [
@@ -27,15 +53,60 @@ const TOASTS = [
   "A competitor just calculated 7×8 without you",
 ];
 
+type Session = {
+  plan: PlanKey | null;
+  calcsRemaining: number;
+  totalCharged: number;
+  history: { expr: string; result: string; at: number }[];
+};
+
+const STORAGE_KEY = "calcpro_session_v1";
+
+const loadSession = (): Session => {
+  if (typeof window === "undefined") return { plan: null, calcsRemaining: 0, totalCharged: 0, history: [] };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { plan: null, calcsRemaining: 0, totalCharged: 0, history: [] };
+};
+
+// Safe-ish eval for our calculator tokens
+const evaluate = (expr: string): string => {
+  try {
+    const js = expr.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-").replace(/[^0-9+\-*/.() ]/g, "");
+    if (!js.trim()) return "0";
+    // eslint-disable-next-line no-new-func
+    const v = Function(`"use strict"; return (${js})`)();
+    if (typeof v !== "number" || !isFinite(v)) return "Error";
+    return String(Math.round(v * 1e8) / 1e8);
+  } catch {
+    return "Error";
+  }
+};
+
 function Index() {
-  const [display, setDisplay] = useState("2 + 2 =");
-  const [calcsUsed, setCalcsUsed] = useState(0);
+  const [display, setDisplay] = useState("2 + 2");
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCookies, setShowCookies] = useState(true);
   const [showEula, setShowEula] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
   const [eulaScroll, setEulaScroll] = useState(0);
+  const [session, setSession] = useState<Session>({ plan: null, calcsRemaining: 0, totalCharged: 0, history: [] });
+  const [card, setCard] = useState({ number: "", exp: "", cvc: "", name: "" });
+
+  useEffect(() => {
+    setSession(loadSession());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    }
+  }, [session]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -46,17 +117,36 @@ function Index() {
   }, []);
 
   const handleKey = (k: string) => {
-    if (k === "=") {
-      setCalcsUsed((c) => c + 1);
-      setShowPaywall(true);
+    if (k === "C") {
+      setDisplay("0");
       return;
     }
-    setDisplay((d) => (d === "2 + 2 =" ? k : d + " " + k));
+    if (k === "=") {
+      if (!session.plan || session.calcsRemaining <= 0) {
+        setShowPaywall(true);
+        return;
+      }
+      const result = evaluate(display);
+      setSession((s) => ({
+        ...s,
+        calcsRemaining: s.calcsRemaining - 1,
+        history: [{ expr: display, result, at: Date.now() }, ...s.history].slice(0, 20),
+      }));
+      setDisplay(result);
+      setToast(
+        session.calcsRemaining - 1 <= 0
+          ? "💀 You're out of calcs. Time to renew (price went up 12%)."
+          : `✨ Math achieved. ${session.calcsRemaining - 1} calcs left.`,
+      );
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
+    setDisplay((d) => (d === "0" || d === "Error" ? k : d + k));
   };
 
   const keys = useMemo(
     () => [
-      ["C", "±", "%", "÷"],
+      ["C", "(", ")", "÷"],
       ["7", "8", "9", "×"],
       ["4", "5", "6", "−"],
       ["1", "2", "3", "+"],
@@ -65,9 +155,35 @@ function Index() {
     [],
   );
 
+  const completePurchase = () => {
+    setProcessing(true);
+    setTimeout(() => {
+      const plan = PLANS[selectedPlan];
+      setSession((s) => ({
+        plan: plan.name,
+        calcsRemaining: plan.granted,
+        totalCharged: s.totalCharged + plan.priceNum,
+        history: s.history,
+      }));
+      setProcessing(false);
+      setShowEula(false);
+      setShowCheckout(false);
+      setToast(
+        `✅ Charged ${plan.price}. You got ${plan.granted} calcs (advertised ${plan.advertised.toLocaleString()}). Fine print, baby.`,
+      );
+      setTimeout(() => setToast(null), 6000);
+    }, 1800);
+  };
+
+  const clearSession = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setSession({ plan: null, calcsRemaining: 0, totalCharged: 0, history: [] });
+    setToast("🧹 Session wiped. Your $$$ is NOT refunded.");
+    setTimeout(() => setToast(null), 4000);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background pb-24">
-      {/* Cookie banner */}
       {showCookies && (
         <div className="fixed inset-x-0 top-0 z-50 border-b border-border bg-foreground text-background px-4 py-3 text-sm shadow-lg">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
@@ -90,7 +206,6 @@ function Index() {
       )}
 
       <div className={`mx-auto max-w-md px-4 ${showCookies ? "pt-24" : "pt-10"}`}>
-        {/* Header */}
         <header className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand to-danger text-brand-foreground font-black">
@@ -103,16 +218,26 @@ function Index() {
               </p>
             </div>
           </div>
-          <span className="rounded-full border border-danger/30 bg-danger/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-danger">
-            Free Plan
+          <span
+            className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
+              session.plan
+                ? "border-brand/40 bg-brand/10 text-brand"
+                : "border-danger/30 bg-danger/10 text-danger"
+            }`}
+          >
+            {session.plan ? `${session.plan} · ${session.calcsRemaining} left` : "Free Plan"}
           </span>
         </header>
 
         {/* Calculator */}
         <div className="rounded-3xl border border-border bg-card p-4 shadow-2xl">
           <div className="relative mb-4 flex items-center justify-between rounded-2xl bg-foreground px-5 py-6 text-background">
-            <span className="text-3xl font-light tracking-wide">{display}</span>
-            <Lock className="h-5 w-5 text-lock" />
+            <span className="truncate text-3xl font-light tracking-wide">{display}</span>
+            {session.plan ? (
+              <CheckCircle2 className="h-5 w-5 text-brand" />
+            ) : (
+              <Lock className="h-5 w-5 text-lock" />
+            )}
           </div>
 
           <div className="space-y-2">
@@ -143,49 +268,73 @@ function Index() {
           </div>
         </div>
 
-        {/* Upgrade card */}
+        {/* Session status */}
         <div className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-xl">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-lock" />
-            <h2 className="font-bold">Unlock your result</h2>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            You've used <b className="text-foreground">{calcsUsed}</b> of your <b>0</b> free calculations this month.
-            Upgrade to see the answer.
-          </p>
-
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {PLANS.slice(0, 3).map((p, i) => (
+          {session.plan ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-brand" />
+                <h2 className="font-bold">{session.plan} Member</h2>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                You have <b className="text-foreground">{session.calcsRemaining}</b> calculations left. Total charged
+                so far: <b className="text-danger">${session.totalCharged.toFixed(2)}</b>.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setShowPaywall(true)}
+                  className="flex-1 rounded-xl bg-brand py-2.5 text-xs font-bold text-brand-foreground hover:opacity-90"
+                >
+                  Buy More (12% Surcharge)
+                </button>
+                <button
+                  onClick={clearSession}
+                  className="rounded-xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:bg-secondary"
+                >
+                  Wipe Session
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-lock" />
+                <h2 className="font-bold">Unlock your calculator</h2>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Free plan includes <b className="text-danger">0</b> calculations. Math is a premium feature.
+              </p>
               <button
-                key={p.name}
-                onClick={() => setSelectedPlan(i)}
-                className={`rounded-xl border bg-background p-3 text-center transition ${
-                  selectedPlan === i ? "border-brand ring-2 ring-brand" : "border-border"
-                }`}
+                onClick={() => setShowPaywall(true)}
+                className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/30 hover:opacity-90"
               >
-                <div className="flex items-center justify-center gap-1 text-[10px] font-bold tracking-wider text-muted-foreground">
-                  {p.name}
-                  {p.featured && <Star className="h-3 w-3 fill-lock text-lock" />}
-                </div>
-                <div className="mt-1 text-base font-black">{p.price}</div>
-                <div className="text-[10px] text-muted-foreground">/mo</div>
-                <div className="mt-1 text-[10px] text-muted-foreground">{p.perk}</div>
+                Choose a Plan
               </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setShowPaywall(true)}
-            className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-bold text-brand-foreground shadow-lg shadow-brand/30 transition hover:opacity-90"
-          >
-            Upgrade to see {display.replace("=", "").trim() || "2 + 2"}
-          </button>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Free plan: <span className="font-bold text-danger">0 calculations/month</span>
-          </p>
+            </>
+          )}
         </div>
 
-        {/* Sarcastic features */}
+        {/* History */}
+        {session.history.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Session History ({session.history.length})
+              </h3>
+              <span className="text-[10px] text-muted-foreground">stored locally · forever</span>
+            </div>
+            <ul className="divide-y divide-border text-sm">
+              {session.history.slice(0, 6).map((h, i) => (
+                <li key={i} className="flex items-center justify-between py-2">
+                  <span className="font-mono text-muted-foreground">{h.expr}</span>
+                  <span className="font-mono font-bold">= {h.result}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Features */}
         <div className="mt-6 space-y-2">
           {[
             { icon: Sparkles, t: "AI-Powered Addition™", d: "Our GPT-7 model decides if 2+2 is really 4 today." },
@@ -203,7 +352,6 @@ function Index() {
           ))}
         </div>
 
-        {/* Fake testimonials */}
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
           <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Loved by 0 calculators
@@ -225,28 +373,30 @@ function Index() {
           ))}
         </div>
 
-        <footer className="mt-8 text-center text-[10px] text-muted-foreground">
-          © 2026 CalcPro Holdings, LLC, a subsidiary of CalcPro International, a portfolio company of CalcPro Capital.
-          <br />
-          By reading this footer you owe us $3.
+        <footer className="mt-8 space-y-2 text-center text-[10px] text-muted-foreground">
+          <p>
+            © 2026 CalcPro Holdings, LLC, a subsidiary of CalcPro International, a portfolio company of CalcPro
+            Capital. By reading this footer you owe us $3.
+          </p>
+          <p className="text-foreground/70">
+            🪤 A sketchy idea by <b className="text-brand">Ntwali</b> :) — built to make non-tech users flinch.
+          </p>
         </footer>
       </div>
 
-      {/* Live toast */}
       {toast && (
         <div className="fixed bottom-4 left-4 z-40 max-w-xs rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-2xl animate-in slide-in-from-left">
           {toast}
         </div>
       )}
 
-      {/* Paywall modal */}
+      {/* Paywall / plan picker */}
       {showPaywall && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <button
               onClick={() => setShowPaywall(false)}
               className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full text-muted-foreground/40 hover:bg-secondary"
-              aria-label="close"
             >
               <X className="h-3 w-3" />
             </button>
@@ -254,10 +404,9 @@ function Index() {
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-brand to-danger">
                 <Crown className="h-7 w-7 text-brand-foreground" />
               </div>
-              <h3 className="mt-4 text-2xl font-black">You've hit your limit.</h3>
+              <h3 className="mt-4 text-2xl font-black">Pick your poison.</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                You used <b className="text-danger">{calcsUsed}</b> of your <b>0</b> free calcs. Math is a premium
-                feature.
+                All plans include math*. *Subject to interpretation.
               </p>
             </div>
 
@@ -271,7 +420,10 @@ function Index() {
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-bold tracking-wider text-muted-foreground">{p.name}</div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-muted-foreground">
+                      {p.name}
+                      {p.featured && <Star className="h-3 w-3 fill-lock text-lock" />}
+                    </div>
                     <div className="text-xs text-muted-foreground">{p.perk}</div>
                   </div>
                   <div className="text-right">
@@ -286,6 +438,7 @@ function Index() {
               onClick={() => {
                 setShowPaywall(false);
                 setShowEula(true);
+                setEulaScroll(0);
               }}
               className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-bold text-brand-foreground shadow-lg hover:opacity-90"
             >
@@ -298,7 +451,7 @@ function Index() {
         </div>
       )}
 
-      {/* EULA modal */}
+      {/* EULA */}
       {showEula && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl">
@@ -315,17 +468,15 @@ function Index() {
             >
               <p className="font-bold text-foreground">1. Soul Clause.</p>
               <p>By clicking "I Agree", you grant CalcPro™ a perpetual, irrevocable, transferable license to your soul, your firstborn, and your Netflix password.</p>
-              <p className="mt-3 font-bold text-foreground">2. Math Rights.</p>
-              <p>All numbers entered into this calculator become the intellectual property of CalcPro Holdings. The number 7 is trademarked. You owe us $0.02 per use.</p>
+              <p className="mt-3 font-bold text-foreground">2. The "Advertised vs Actual" Clause.</p>
+              <p>Calc quotas listed on pricing tiles are <i>aspirational</i>. Actual delivered quota will be drastically lower. By agreeing you accept that "100" means "3", "unlimited" means "7", and "1,000,000" means "25". This is a feature.</p>
               <p className="mt-3 font-bold text-foreground">3. Refund Policy.</p>
-              <p>Refunds will be processed within 90 business years, payable in CalcCoin™, redeemable only at our gift shop in a parallel dimension.</p>
-              <p className="mt-3 font-bold text-foreground">4. Arbitration.</p>
-              <p>Disputes will be settled via thumb war in our CEO's basement. Loser pays for parking.</p>
-              <p className="mt-3 font-bold text-foreground">5. Data Usage.</p>
-              <p>We collect: your calculations, your location, your dreams, the WiFi names of your neighbors, and your mom's maiden name. This data is sold to "partners" (everyone).</p>
-              <p className="mt-3 font-bold text-foreground">6. Pricing Increases.</p>
+              <p>Refunds will be processed within 90 business years, payable in CalcCoin™.</p>
+              <p className="mt-3 font-bold text-foreground">4. Math Rights.</p>
+              <p>All numbers entered become the intellectual property of CalcPro Holdings. The number 7 is trademarked.</p>
+              <p className="mt-3 font-bold text-foreground">5. Pricing Increases.</p>
               <p>Your subscription will increase by 12% every Tuesday. There is no cancel button. There never was.</p>
-              <p className="mt-3 font-bold text-foreground">7. Acknowledgment.</p>
+              <p className="mt-3 font-bold text-foreground">6. Acknowledgment.</p>
               <p>You acknowledge that 2 + 2 may equal 5 if our AI deems it strategically beneficial to shareholders.</p>
               <p className="mt-3">...continued for 47,282 more pages...</p>
               <p className="mt-3 text-foreground">Bottom. You may now click "I Agree".</p>
@@ -344,14 +495,85 @@ function Index() {
                 disabled={eulaScroll < 95}
                 onClick={() => {
                   setShowEula(false);
-                  setToast("✅ Charged $299. Welcome to PRO. Result: 4 (estimated).");
-                  setTimeout(() => setToast(null), 5000);
+                  setShowCheckout(true);
                 }}
                 className="flex-1 rounded-xl bg-brand py-3 text-sm font-bold text-brand-foreground shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {eulaScroll < 95 ? `Scroll (${Math.floor(eulaScroll)}%)` : "I Agree to Everything"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Checkout */}
+      {showCheckout && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-brand" />
+              <h3 className="text-xl font-black">Secure* Checkout</h3>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              *Card data sent in plaintext to 14 "partners". You agreed (page 9,841).
+            </p>
+
+            <div className="mt-4 rounded-xl border border-border bg-background p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {PLANS[selectedPlan].name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Advertised: {PLANS[selectedPlan].advertised.toLocaleString()} calcs/mo
+                  </div>
+                </div>
+                <div className="text-xl font-black">{PLANS[selectedPlan].price}</div>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <input
+                value={card.name}
+                onChange={(e) => setCard({ ...card, name: e.target.value })}
+                placeholder="Name on card (and SSN)"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand"
+              />
+              <input
+                value={card.number}
+                onChange={(e) => setCard({ ...card, number: e.target.value })}
+                placeholder="4242 4242 4242 4242"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono outline-none focus:border-brand"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={card.exp}
+                  onChange={(e) => setCard({ ...card, exp: e.target.value })}
+                  placeholder="MM/YY"
+                  className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono outline-none focus:border-brand"
+                />
+                <input
+                  value={card.cvc}
+                  onChange={(e) => setCard({ ...card, cvc: e.target.value })}
+                  placeholder="CVC"
+                  className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono outline-none focus:border-brand"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={completePurchase}
+              disabled={processing}
+              className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-bold text-brand-foreground shadow-lg hover:opacity-90 disabled:opacity-60"
+            >
+              {processing ? "Charging your card 3 times…" : `Pay ${PLANS[selectedPlan].price}`}
+            </button>
+            <button
+              onClick={() => setShowCheckout(false)}
+              className="mt-2 w-full text-center text-[10px] text-muted-foreground hover:underline"
+            >
+              Cancel (you'll still be charged a $4 cancellation fee)
+            </button>
           </div>
         </div>
       )}
