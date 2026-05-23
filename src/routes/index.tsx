@@ -233,28 +233,67 @@ function Index() {
       )}
 
       <div className={`mx-auto max-w-md px-4 ${showCookies ? "pt-24" : "pt-10"}`}>
-        <header className="mb-6 flex items-center justify-between">
+        <header className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand to-danger text-brand-foreground font-black">
-              C
+              ∑
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight">CalcPro™</h1>
+              <h1 className="text-xl font-black tracking-tight">MaaS</h1>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                AI · Cloud · Blockchain · Quantum
+                Math · as · a · Service
               </p>
             </div>
           </div>
-          <span
-            className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
-              session.plan
-                ? "border-brand/40 bg-brand/10 text-brand"
-                : "border-danger/30 bg-danger/10 text-danger"
-            }`}
-          >
-            {session.plan ? `${session.plan} · ${session.calcsRemaining} left` : "Free Plan"}
-          </span>
+          {session.plan ? (
+            <div className="flex items-center gap-1.5 rounded-full border border-brand bg-gradient-to-r from-brand to-danger px-3 py-1.5 shadow-lg shadow-brand/40">
+              <Crown className="h-3 w-3 text-brand-foreground" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-brand-foreground">
+                {session.plan}
+              </span>
+              <span className="rounded-full bg-background/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-foreground">
+                {session.calcsRemaining} left
+              </span>
+            </div>
+          ) : (
+            <span className="animate-pulse rounded-full border border-danger/40 bg-danger/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-danger">
+              ⚠ No Plan
+            </span>
+          )}
         </header>
+
+        {session.plan && (
+          <div className="mb-4 overflow-hidden rounded-xl border border-brand/30 bg-brand/5">
+            <div className="h-1.5 bg-secondary">
+              <div
+                className="h-full bg-gradient-to-r from-brand to-danger transition-all"
+                style={{
+                  width: `${Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      (session.calcsRemaining /
+                        Math.max(1, PLANS.find((p) => p.name === session.plan)?.granted ?? 1)) *
+                        100,
+                    ),
+                  )}%`,
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between px-3 py-2 text-[10px] text-muted-foreground">
+              <span>
+                Quota:{" "}
+                <b className="text-foreground">
+                  {session.calcsRemaining}/{PLANS.find((p) => p.name === session.plan)?.granted}
+                </b>{" "}
+                (advertised{" "}
+                {PLANS.find((p) => p.name === session.plan)?.advertised.toLocaleString()})
+              </span>
+              <span className="text-danger">${session.totalCharged.toFixed(2)} spent</span>
+            </div>
+          </div>
+        )}
+
 
         {/* Calculator */}
         <div className="rounded-3xl border border-border bg-card p-4 shadow-2xl">
