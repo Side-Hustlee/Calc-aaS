@@ -87,7 +87,9 @@ const evaluate = (expr: string): string => {
 };
 
 function Index() {
-  const [display, setDisplay] = useState("2 + 2");
+  const [display, setDisplay] = useState("0");
+  const [pendingExpr, setPendingExpr] = useState<string | null>(null);
+  const [showGotcha, setShowGotcha] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCookies, setShowCookies] = useState(true);
   const [showEula, setShowEula] = useState(false);
@@ -98,6 +100,7 @@ function Index() {
   const [eulaScroll, setEulaScroll] = useState(0);
   const [session, setSession] = useState<Session>({ plan: null, calcsRemaining: 0, totalCharged: 0, history: [] });
   const [card, setCard] = useState({ number: "", exp: "", cvc: "", name: "" });
+
 
   useEffect(() => {
     setSession(loadSession());
